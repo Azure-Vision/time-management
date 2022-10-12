@@ -24,7 +24,6 @@
 
 
 var time = 0;
-var remained = false;
 var domain_split; var domain;
 if (document.domain.endsWith(".com.cn")){
     domain_split = document.domain.split('.').slice(-3);
@@ -34,60 +33,33 @@ if (document.domain.endsWith(".com.cn")){
     domain = domain_split.join(".");
 }
 
-/* if (domain == "zhihu.com"){
-    var r = confirm("刷知乎不如去看书");
-    if (r == true) {
-        window.close();
-        window.close();
-        window.close();
-        window.close();
-        window.open("https://weread.qq.com/");
-    }
-} */
 
-/*
-if (domain == "zhihu.com" && document.location.pathname == "/"){
-    var query = prompt("你要搜什么？");
-    if (query == null || query == ""){
-        window.close();
-        window.close();
-        window.close();
-        window.close();
-        window.open("Reeder://1");
-    } else {
-        window.close();
-        window.close();
-        window.close();
-        window.close();
-        window.open(`https://www.zhihu.com/search?q=${query}&type=content`);
-    }
+var domain_left_time = GM_getValue('domain_left_time');
+var domain_set_time = GM_getValue('domain_set_time');
+if (domain_left_time == undefined) {
+    domain_left_time = {};
+    GM_setValue('domain_left_time', domain_left_time);
 }
-*/
+if (domain_set_time == undefined) {
+    domain_set_time = {};
+    GM_setValue('domain_set_time', domain_set_time);
+}
 
-var domain_time = GM_getValue('domain_time');
-var domain_extended = GM_getValue('domain_extended');
-if (domain_time == undefined) {
-    domain_time = {};
-    GM_setValue('domain_time', domain_time);
-}
-if (domain_extended == undefined) {
-    domain_extended = {};
-    GM_setValue('domain_extended', domain_extended);
-}
-var domain_exists = domain_time.hasOwnProperty(domain) && domain_time[domain] > 0;
-console.log("domain:", domain, "domain_extended", domain_extended, "domain_time", domain_time);
+
+var domain_exists = domain_left_time.hasOwnProperty(domain);
+console.log("domain:", domain, "domain_set_time", domain_set_time, "domain_left_time", domain_left_time);
 (function () {
     'use strict';
     if (!domain_exists){
-        time = prompt("你为什么要打开网站？\n你要看多长时间？\n你还能去做什么？\n\n请设置浏览时间(分钟)", "");
+        time = prompt("你为什么要打开网站？\n你要看多长时间？\n你还能去做什么？\n\n请设置浏览时间(分钟)，跟自己做一个约定", "");
         if (time == null) {
             window.close();
         }
         time = time * 60 * 1000;
-        domain_time[domain] = time;
-        GM_setValue('domain_time', domain_time);
-        domain_extended[domain] = false;
-        GM_setValue('domain_extended', domain_extended);
+        domain_left_time[domain] = time;
+        domain_set_time[domain] = time;
+        GM_setValue('domain_left_time', domain_left_time);
+        GM_setValue('domain_set_time', domain_set_time);
     }
     setInterval(tick, 1000)
     // Your code here...
@@ -95,46 +67,35 @@ console.log("domain:", domain, "domain_extended", domain_extended, "domain_time"
 
 
 function tick() {
-    domain_time = GM_getValue('domain_time');
-    domain_extended = GM_getValue('domain_extended');
-    if (time == domain_time[domain]){
-        time = domain_time[domain] - 1000;
-        domain_time[domain] = time;
-        GM_setValue('domain_time', domain_time);
+    // update domain_left_time, do not update domain_set_time
+    domain_left_time = GM_getValue('domain_left_time');
+    if (time == domain_left_time[domain]){
+        time = domain_left_time[domain] - 1000;
+        domain_left_time[domain] = time;
+        GM_setValue('domain_left_time', domain_left_time);
     } else {
-        time = domain_time[domain];
+        time = domain_left_time[domain];
     }
-    console.log("time:", time, "domain:", domain);
-    if (time == 0){
-        if (!domain_extended[domain]){
-            var r = confirm("时间结束，是否退出：" + document.title);
-            if (r == true) {
-                time = 0;
-                window.close();
-            } else {
-                time = prompt("设置继续浏览时长", "");
-                if (time <= 1) {
-                    remained = true;
-                } else {
-                    remained = false;
-                }
-                time = time * 60 * 1000;
-                domain_time[domain] = time;
-                GM_setValue('domain_time', domain_time);
-                domain_extended[domain] = true;
-                GM_setValue('domain_extended', domain_extended);
-            }
+    if (time == 60 * 1000) {
+        alert("还剩1分钟");
+    }
+    if (time == -1000) {
+        var r = confirm("时间结束，是否退出：" + document.title);
+        if (r == true) {
+            window.close();
         } else {
+            alert("请注意时间");
+        }
+    }
+    if (time < 0 && time % (5 * 60 * 1000) == 0){
+        console.log("time:", time);
+        var a = ((GM_getValue('domain_set_time')[domain] - time)/60000).toString();
+        var b = (-time/60000).toString();
+        var c = prompt("已浏览" + a + "分钟（超时" + b + "分钟），是否退出？输入"+a+"继续浏览" + document.title);
+        if (c != a) {
             window.close();
         }
     }
-    if (time < -2000) {
-        window.close();
-        alert("时间已到");
-    }
-    if (time <= 60 * 1000 && remained == false) {
-        alert("还剩1分钟");
-        remained = true;
-    }
+
 
 }
